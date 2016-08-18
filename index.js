@@ -24,7 +24,6 @@ var mongo = mongoConnect((col, done) => {
     }, 5000);
   });
 });
-setInterval(() => console.log(scores), 1000);
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/as2tracker-client/index.html');
