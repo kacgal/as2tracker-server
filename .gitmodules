@@ -1,0 +1,3 @@
+[submodule "as2tracker-client"]
+	path = as2tracker-client
+	url = https://github.com/kacgal/as2tracker-client
