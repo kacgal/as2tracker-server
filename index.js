@@ -132,7 +132,10 @@ function updateSong(title, artist, duration, cb) {
           }
         }, (err, response, body) => {
           if (err) console.log(err);
-          parseScoreboard(body, cb);
+          parseScoreboard(body, (songid, changes) => {
+            cb(songid, changes);
+            io.emit('update', title, artist, songid, changes);
+          });
         });
       })
     }
