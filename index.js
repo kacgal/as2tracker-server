@@ -123,6 +123,7 @@ function parseScoreboard(xml, cb) {
     var global = scoreboards.filter((el, i, arr) => {
       return el.$.name == "public";
     })[0];
+    if (!('ride' in global)) return;
     var rides = global.ride.map((ride) => {
       return {
         username: ride.username[0],
