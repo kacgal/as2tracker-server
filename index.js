@@ -68,7 +68,7 @@ function getRandomSongs(arr, max) {
         taken = new Array(len);
     while (max--) {
       var x = Math.floor(Math.random() * len);
-      result[n] = songs[x in taken ? taken[x] : x];
+      result[max] = songs[x in taken ? taken[x] : x];
       taken[x] = --len;
     }
   }
