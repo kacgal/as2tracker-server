@@ -12,13 +12,26 @@ let MongoClient = require('mongodb').MongoClient;
 let xml2js = require('xml2js');
 
 var scores = null;
-var mongo = mongoConnect((col, done) => {
+var songs = null;
+mongoConnect('storage', (col, done) => {
   col.find({}).limit(1).toArray((err, doc) => {
     scores = doc[0];
     done();
     setInterval(() => {
-      mongoConnect((col, done) => {
+      mongoConnect('storage', (col, done) => {
         col.updateOne({}, scores);
+        done();
+      });
+    }, 5000);
+  });
+});
+mongoConnect('songs', (col, done) => {
+  col.find({}).limit(1).toArray((err, doc) => {
+    songs = doc[0];
+    done();
+    setInterval(() => {
+      mongoConnect('songs', (col, done) => {
+        col.updateOne({}, songs);
         done();
       });
     }, 5000);
@@ -32,11 +45,50 @@ app.get('/', (req, res) => {
 io.on('connection', (socket) => {
   console.log('Connection');
   socket.on('song_update', updateSong);
+  socket.on('get_scoreboard', (songid, cb) => {
+    var fscores = {};
+    Object.keys(scores).filter((mode) => songid in scores[mode]).forEach((mode) => {
+      fscores[mode] = getTopScores(cloneObject(scores[mode][songid]));
+    });
+    if (cb)
+      cb(fscores);
+  });
+  socket.on('init', () => {
+    socket.emit('random_songs', getRandomSongs(songs, 10));
+  });
 });
 
-function mongoConnect(cb) {
+function getRandomSongs(arr, max) {
+  var songs = Object.keys(arr);
+  songs.pop();
+  var result = new Array(max);
+  if (songs.length > max) {
+    // Array randomizer (http://stackoverflow.com/a/19270021/1469722)
+    var len = songs.length,
+        taken = new Array(len);
+    while (max--) {
+      var x = Math.floor(Math.random() * len);
+      result[n] = songs[x in taken ? taken[x] : x];
+      taken[x] = --len;
+    }
+  }
+  else {
+    result = songs;
+  }
+  result = result.map((id) => {
+    data = arr[id];
+    return {
+      title: data['title'],
+      artist: data['artist'],
+      id: id
+    };
+  });
+  return result;
+}
+
+function mongoConnect(collection, cb) {
   MongoClient.connect('mongodb://127.0.0.1:27017/as2tracker', (err, db) => {
-    var col = db.collection('storage');
+    var col = db.collection(collection);
     cb(col, () => db.close());
   });
 }
@@ -132,9 +184,10 @@ function updateSong(title, artist, duration, cb) {
           }
         }, (err, response, body) => {
           if (err) console.log(err);
-          parseScoreboard(body, (songid, changes) => {
-            cb(songid, changes);
-            io.emit('update', title, artist, songid, changes);
+          parseScoreboard(body, (songid, mode, changes) => {
+            cb(songid, mode, changes);
+            songs[songid] = {title: title, artist: artist};
+            io.emit('update', title, artist, songid, mode, changes);
           });
         });
       })
